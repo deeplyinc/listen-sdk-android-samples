@@ -9,5 +9,5 @@ Require `asdf` and `direnv`.
 ```sh
 cd docs
 pip install -r requirements.txt
-sphinx-build . ./build
+sphinx-build -E . ./build
 ```

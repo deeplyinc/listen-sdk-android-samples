@@ -1,10 +1,4 @@
-# Installation
-
-hello
-
-## Hello
-
-hello, world! 
+# Setup
 
 ## Dependency
 

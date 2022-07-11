@@ -11,7 +11,7 @@ Please contact us if you want to buy a license.
    :hidden:
    
    contents/getting-started/quick-start
-   contents/getting-started/installation
+   contents/getting-started/setup
    contents/getting-started/audio-recording
    contents/getting-started/inference
 

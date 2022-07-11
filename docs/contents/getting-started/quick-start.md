@@ -3,10 +3,7 @@
 In this page, we introduce the simple way to use Listen.
 We assume that you already have a SDK key and `.dpl` file that is provided after service registration. 
 
-## Installation
+## Setup
 
-Put the following 
+Hello, world!
 
-## Quick Start
-
-hello, world! 

@@ -28,12 +28,12 @@ You can get the required audio sample input size via `getAudioParams().inputSize
 
 ## Asynchronous Inference
 
-If we want to detect a specific sound event, asynchronos manner is better for sound event detection especially because we cannot estimate when the sound event occurs.
+If we want to detect a specific sound event in real-time, asynchronos manner is better for sound event detection especially because we cannot estimate when the sound event occurs.
 Asynchronous detection performed as following manner:
 
 1. Register sound events we want to detect
-2. Pass sound samples recoreded from microphone to `inferenceAsync(audioSamples)` method
-3. Listener or coroutine will be invoked when the registered sound event is detected
+2. Pass audio samples recorded in real-time to `inferenceAsync(audioSamples)` method
+3. Listener or Kotlin coroutine will be invoked when the registered sound event is detected
 
 ### Register sound events
 
