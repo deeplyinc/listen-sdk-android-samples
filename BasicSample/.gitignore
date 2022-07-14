@@ -1,0 +1,31 @@
+# Built application files
+*.apk
+*.ap_
+*.aab
+
+# Gradle files
+.gradle
+/build
+
+# IntelliJ
+*.iml
+.idea
+
+# Android Studio captures folder
+/captures
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# External native build folder generated in Android Studio 2.2 and later
+.externalNativeBuild
+
+# for MacOS
+.DS_Store
+
+# PyTorch model files 
+*.pt
+*.ptl
+
+# R8 mapping file
+*.map
