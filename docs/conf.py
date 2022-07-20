@@ -10,3 +10,5 @@ extensions = [
 ]
 
 html_theme = 'sphinx_rtd_theme'
+
+exclude_patterns = ['.direnv', 'README.md']
