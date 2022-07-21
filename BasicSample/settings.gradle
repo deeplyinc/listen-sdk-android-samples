@@ -10,6 +10,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url "app/libs" }
     }
 }
 rootProject.name = "BasicSample"
