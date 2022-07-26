@@ -1,6 +1,9 @@
 # Audio Sampling
 
-Audio sampling
+Knowing how audio is recorded and delivered through a microphone will greatly help you use Listen and implement audio-related features.
+Here we describe the basic concept of audio sampling and how to use it.
+
+
 
 ## Basic Concept
 
@@ -20,7 +23,8 @@ In other words, if you record for one second at a 1,000 Hz sampling rate with a 
 = 2,000 bytes = 2 KB
 ```
 
-Since the sampling rate is how many audio samples there are in 1 second, if the other conditions are the same, the higher the sampling rate, the better the sound quality, and the higher the sampling rate, even if you record the sound for the same time, the higher the capacity. 
+Since the sampling rate is how many audio samples there are in 1 second, if the other conditions are the same, the higher the sampling rate, the better the sound quality. 
+Likewise, the higher the sampling rate, even if you record the sound for the same time, the higher the storage space. 
 Typically, 8 KHz sampling rate is widely used for landline phones, and 44.1 KHz or 48 KHz sampling rate is widely used for music files such as WAV and MP3 files. 
 This means that landline phones have a second of sound with 8,000 audio samples, and music files have a second of sound with 44,100 or 48,000 audio samples. 
 Considering the difference in sound quality between landline phones and audio files, you can see the effect of this difference in sampling rates on sound quality. 
@@ -97,7 +101,7 @@ Typically, there are several reasons as follows:
 
 So what should I do?
 You can adjust the size of the buffer. 
-If we set the size of the buffer to `10 * sampling ratio` as shown below, the audio sample we get from the buffer will be exactly 10 seconds long audio.
+If we set the size of the buffer to `10 * sampling rate` as shown below, the audio sample we get from the buffer will be exactly 10 seconds long audio.
 
 ```kotlin
 val sampleRate = 16000
@@ -115,7 +119,7 @@ Remembering that the number of audio samples means time can be of great help whe
 ## Applying to Listen
 
 The Listen Sound Event AI analysis model was also created to match a specific sampling rate value.
-Therefore, for Listen Sound Event AI to be able to properly analyze, the recording function must also be implemented according to the sampling rate of the pre-set AI model. 
+Therefore, for Listen Sound Event AI to be able to properly analyze, the recording function must also be implemented according to the pre-determined sampling rate of the AI model. 
 The Listen SDK provides sampling rates for AI models using the `getAudioParams()` method.
 If the recording function is implemented using `DeeplyRecorder`, it can be used as follows:
 
