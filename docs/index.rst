@@ -16,7 +16,6 @@ Examples of various Android apps using Listen are available on the `official Git
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started
-   :hidden:
    
    contents/getting-started/quick-start
    contents/getting-started/getting-started
@@ -32,6 +31,5 @@ Examples of various Android apps using Listen are available on the `official Git
 .. toctree::
    :maxdepth: 1
    :caption: Trouble Shooting
-   :hidden:
 
    contents/trouble-shooting/faq
