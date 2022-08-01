@@ -27,7 +27,6 @@ Examples of various Android apps using Listen are available on the `official Git
    :caption: Advanced Topics
 
    contents/advanced-topics/audio-sampling
-   contents/advanced-topics/background-recording
 
 .. toctree::
    :maxdepth: 1
