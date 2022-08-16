@@ -6,8 +6,8 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import com.deeplyinc.listen.samples.basic.databinding.ActivityMainBinding
-import com.deeplyinc.listen.samples.basic.simpleaudiorecord.SimpleAudioRecordActivity
-import com.deeplyinc.listen.samples.basic.simpledeeplyrecorder.SimpleDeeplyRecorderActivity
+import com.deeplyinc.listen.samples.basic.simple.SimpleAudioRecordActivity
+import com.deeplyinc.listen.samples.basic.simple.SimpleDeeplyRecorderActivity
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding

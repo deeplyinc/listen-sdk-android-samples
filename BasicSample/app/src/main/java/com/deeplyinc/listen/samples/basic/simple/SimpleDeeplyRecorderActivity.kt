@@ -1,10 +1,7 @@
-package com.deeplyinc.listen.samples.basic.simpleaudiorecord
+package com.deeplyinc.listen.samples.basic.simple
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.media.AudioFormat
-import android.media.AudioRecord
-import android.media.MediaRecorder
 import android.os.Bundle
 import android.util.Log
 import android.view.WindowManager
@@ -14,29 +11,30 @@ import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.lifecycleScope
 import com.deeplyinc.listen.samples.basic.R
-import com.deeplyinc.listen.samples.basic.databinding.ActivitySimpleAudioRecordBinding
+import com.deeplyinc.listen.samples.basic.databinding.ActivitySimpleDeeplyRecorderBinding
+import com.deeplyinc.listen.sdk.AudioEventClassificationListener
 import com.deeplyinc.listen.sdk.Listen
 import com.deeplyinc.listen.sdk.audio.classifiers.datastructures.ClassifierOutput
 import com.deeplyinc.listen.sdk.exceptions.ListenAuthException
+import com.deeplyinc.recorder.DeeplyRecorder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class SimpleAudioRecordActivity : AppCompatActivity() {
+class SimpleDeeplyRecorderActivity : AppCompatActivity() {
     companion object {
-        private const val TAG = "SimpleAudioRecordActivity"
+        private const val TAG = "SimpleDeeplyRecorder"
     }
 
-    private lateinit var binding: ActivitySimpleAudioRecordBinding
+    private lateinit var binding: ActivitySimpleDeeplyRecorderBinding
 
     private val listen = Listen(this)
-    private lateinit var audioRecord: AudioRecord
-    private var isRecording = false
+    private lateinit var recorder: DeeplyRecorder
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) // Prevent screen off
-        binding = DataBindingUtil.setContentView(this, R.layout.activity_simple_audio_record)
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_simple_deeply_recorder)
         binding.lifecycleOwner = this
 
         initialize()
@@ -53,6 +51,11 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
             try {
                 listen.init("SDK KEY", "DPL ASSET PATH")
 
+                recorder = DeeplyRecorder(
+                    sampleRate = listen.getAudioParams().sampleRate,
+                    bufferSize = listen.getAudioParams().inputSize
+                )
+
                 withContext(Dispatchers.Main) {
                     binding.start.isEnabled = true
                 }
@@ -64,8 +67,8 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
 
     private fun configureLayout() {
         binding.start.setOnClickListener {
-            if (isRecording) {
-                stopRecording()
+            if (recorder.isRecording()) {
+                recorder.stop()
                 binding.start.text = "Start"
             } else {
                 startRecording()
@@ -84,33 +87,28 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
     }
 
     private fun startRecording() {
-        if (ActivityCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)
-            != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.w(TAG, "Recording permission is not granted ")
             return
-        }
-
-        val bufferSize = listen.getAudioParams().inputSize
-        val buffer = ShortArray(bufferSize)
-        val sampleRate = listen.getAudioParams().sampleRate
-        audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize)
-        audioRecord.startRecording()
-        isRecording = true
-        lifecycleScope.launch(Dispatchers.Default) {
-            while (isRecording) {
-                // called every 0.1 second, buffer contains 1,000 samples
-                audioRecord.read(buffer, 0, buffer.size)
-                val result = listen.inference(buffer)
-                withContext(Dispatchers.Main) {
-                    handleResult(result)
+        } else {
+            lifecycleScope.launch {
+                recorder.start().collect {
+                    runInference(it)
                 }
             }
         }
     }
 
-    private fun stopRecording() {
-        isRecording = false
-        audioRecord.stop()
-        audioRecord.release()
+    private suspend fun runInference(audioSamples: ShortArray) {
+        // run inference
+        val result = listen.inference(audioSamples)
+        withContext(Dispatchers.Main) {
+            handleResult(result)
+        }
     }
 
     private fun handleResult(result: ClassifierOutput) {

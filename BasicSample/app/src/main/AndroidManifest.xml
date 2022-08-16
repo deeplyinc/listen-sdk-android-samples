@@ -17,10 +17,10 @@
         android:theme="@style/Theme.BasicSample"
         tools:targetApi="31">
         <activity
-            android:name=".simpledeeplyrecorder.SimpleDeeplyRecorderActivity"
+            android:name=".simple.SimpleDeeplyRecorderActivity"
             android:exported="false" />
         <activity
-            android:name=".simpleaudiorecord.SimpleAudioRecordActivity"
+            android:name=".simple.SimpleAudioRecordActivity"
             android:exported="false" />
         <activity
             android:name=".MainActivity"
