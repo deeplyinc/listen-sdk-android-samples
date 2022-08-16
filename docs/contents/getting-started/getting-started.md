@@ -33,22 +33,99 @@ More detailed information is available in [Audio Recording](audio-recording).
 
 ## Initialization
 
+To use Listen, you must first create a Listen instance and initialize it using the SDK key and `.dpl` file.
+
+
+### The Simplest Method
+
+The simplest form of initialization code is as follows.
 
 ```kotlin
 class MainActivity : AppCompatActivity() {
     
+    // Creat a Listen instance
+    private val listen = Listen(this)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ... 
 
         // Initialize Listen with SDK key and .dpl file
-        val listen = Listen(this)
         listen.init("SDK KEY", "DPL FILE ASSETS PATH")
     }
 }
 ```
 
+At this time, put the `.dpl` file in the `assets` folder and pass the file name to the `init()` function.
+For example, if you put the `listen.dpl` file in the `app/src/main/assets/model.dpl` location, your code should be as follows.
 
 ```kotlin
 listen.init("SDK KEY", "listen.dpl")
+```
+
+The above code works.
+However, in order to use Listen more reliably, we recommend to consider the following points together.
+
+
+### Blocking Thread Issue
+
+The `init()` method internally performs various tasks such as SDK authentication and deep learning model loading. 
+This process may take several seconds depending on the device's performance and network status.
+Because initialization operations are synchronous rather than asynchronous, threads can be blocked while processing these operations.
+Therefore, if initialization is performed on the main thread, [ANR (Application Not Responding)] (https://developer.android.com/topic/performance/vitals/anr) may occur due to thread blocking.
+
+To solve this problem, we recommend to run the `init()` function in a separate thread.
+Below is an example using Kotlin coroutines.
+
+```kotlin
+// Note that the init() takes time and blocks the thread during the initialization
+// process because it contains networking and file operations.
+// We recommend to call init() in other thread like the following code.
+lifecycleScope.launch(Dispatchers.Default) {
+    listen.init("SDK KEY", "DPL FILE ASSETS PATH")
+}
+```
+
+
+### Exception Handling
+
+The `init()` function can raise an exception for a number of reasons.
+Typically, there are cases where the `.dpl` file does not exist, if the connection to the authentication server fails due to an internet connection problem, if the period of use of the SDK key has expired, etc.
+If these exceptions are not handled, the app will be crashed and be forced to close.
+Therefore, for the stablility and reliability of the app, the exception handling for the situation in which an exception occurs should be done as follows.
+
+```kotlin
+try {
+    listen.init("SDK KEY", "DPL FILE ASSETS PATH")
+} catch (e: ListenAuthException) {
+    // Handle authentication exception
+}
+```
+
+
+### A Recommended Way
+
+This is a recommended example initialization code that reflects the considerations introduced above.
+
+```kotlin
+class MainActivity : AppCompatActivity() {
+    
+    // Creat a Listen instance
+    private val listen = Listen(this)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Note that the init() takes time and blocks the thread during the initialization
+        // process because it contains networking and file operations.
+        // We recommend to call init() in other thread like the following code.
+        lifecycleScope.launch(Dispatchers.Default) {
+            try {
+                // Initialize Listen with SDK key and .dpl file
+                listen.init("SDK KEY", "DPL FILE ASSETS PATH")
+            } catch (e: ListenAuthException) {
+                // Handle authentication exception
+            }
+        }
+    }
+}
 ```
