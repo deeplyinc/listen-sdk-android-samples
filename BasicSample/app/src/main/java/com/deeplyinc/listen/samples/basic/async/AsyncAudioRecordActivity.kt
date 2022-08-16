@@ -1,4 +1,4 @@
-package com.deeplyinc.listen.samples.basic.simple
+package com.deeplyinc.listen.samples.basic.async
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -15,6 +15,7 @@ import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.lifecycleScope
 import com.deeplyinc.listen.samples.basic.R
 import com.deeplyinc.listen.samples.basic.databinding.ActivityBasicBinding
+import com.deeplyinc.listen.sdk.AudioEventClassificationListener
 import com.deeplyinc.listen.sdk.Listen
 import com.deeplyinc.listen.sdk.audio.classifiers.datastructures.ClassifierOutput
 import com.deeplyinc.listen.sdk.exceptions.ListenAuthException
@@ -22,9 +23,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class SimpleAudioRecordActivity : AppCompatActivity() {
+class AsyncAudioRecordActivity : AppCompatActivity() {
     companion object {
-        private const val TAG = "SimpleAudioRecordActivity"
+        private const val TAG = "AsyncAudioRecordActivity"
     }
 
     private lateinit var binding: ActivityBasicBinding
@@ -52,12 +53,25 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.Default) {
             try {
                 listen.init("SDK KEY", "DPL ASSET PATH")
+                listen.setAsyncInferenceListener(object : AudioEventClassificationListener {
+                    override fun onDetected(result: ClassifierOutput) {
+                        lifecycleScope.launch(Dispatchers.Main) {
+                            handleResult(result)
+                        }
+                    }
+                })
 
                 withContext(Dispatchers.Main) {
                     binding.start.isEnabled = true
                 }
             } catch (e: ListenAuthException) {
                 e.printStackTrace()
+            }
+
+            listen.resultFlow().collect {
+                withContext(Dispatchers.Main) {
+                    handleResult(it)
+                }
             }
         }
     }
@@ -99,7 +113,7 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
             while (isRecording) {
                 // called every 0.1 second, buffer contains 1,000 samples
                 audioRecord.read(buffer, 0, buffer.size)
-                runInference(buffer)
+                accumulate(buffer)
             }
         }
     }
@@ -110,12 +124,9 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
         audioRecord.release()
     }
 
-    private suspend fun runInference(audioSamples: ShortArray) {
+    private suspend fun accumulate(audioSamples: ShortArray) {
         // run inference
-        val result = listen.inference(audioSamples)
-        withContext(Dispatchers.Main) {
-            handleResult(result)
-        }
+        listen.inferenceAsync(audioSamples)
     }
 
     private fun handleResult(result: ClassifierOutput) {

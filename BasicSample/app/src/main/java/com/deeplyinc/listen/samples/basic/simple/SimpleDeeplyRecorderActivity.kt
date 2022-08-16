@@ -11,8 +11,7 @@ import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.lifecycleScope
 import com.deeplyinc.listen.samples.basic.R
-import com.deeplyinc.listen.samples.basic.databinding.ActivitySimpleDeeplyRecorderBinding
-import com.deeplyinc.listen.sdk.AudioEventClassificationListener
+import com.deeplyinc.listen.samples.basic.databinding.ActivityBasicBinding
 import com.deeplyinc.listen.sdk.Listen
 import com.deeplyinc.listen.sdk.audio.classifiers.datastructures.ClassifierOutput
 import com.deeplyinc.listen.sdk.exceptions.ListenAuthException
@@ -26,7 +25,7 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
         private const val TAG = "SimpleDeeplyRecorder"
     }
 
-    private lateinit var binding: ActivitySimpleDeeplyRecorderBinding
+    private lateinit var binding: ActivityBasicBinding
 
     private val listen = Listen(this)
     private lateinit var recorder: DeeplyRecorder
@@ -34,7 +33,7 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) // Prevent screen off
-        binding = DataBindingUtil.setContentView(this, R.layout.activity_simple_deeply_recorder)
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_basic)
         binding.lifecycleOwner = this
 
         initialize()

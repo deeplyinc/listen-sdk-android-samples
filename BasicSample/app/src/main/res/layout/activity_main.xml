@@ -15,16 +15,28 @@
             android:gravity="center">
 
             <Button
-                android:id="@+id/btn_simple_audio_record"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Simple Audio Record" />
-
-            <Button
                 android:id="@+id/btn_simple_deeply_recorder"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Simple Deeply Recorder" />
+                android:text="Simple (DeeplyRecorder)" />
+
+            <Button
+                android:id="@+id/btn_simple_audio_record"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Simple (AudioRecord)" />
+
+            <Button
+                android:id="@+id/btn_async_deeply_recorder"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Async (DeeplyRecorder)" />
+
+            <Button
+                android:id="@+id/btn_async_audio_record"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Async (AudioRecord)" />
 
         </LinearLayout>
 
