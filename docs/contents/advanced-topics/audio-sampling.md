@@ -38,42 +38,59 @@ Below, we will explain how this concept can be leveraged to implement features m
 
 On Android, recording works by using a buffer to read a certain number of audio samples collected through the microphone.
 
-For example, theoretically, if you record at the same 10,000 Hz sampling rate, you can read one audio sample at a time, or you can read 1,000 audio samples in batches.
-If we record at a 10,000 Hz sampling rate and read 1,000 audio samples at a time, we can process 1,000 new audio samples every 0.1 second.
+For example, theoretically, you can read one audio sample at a time, or you can read multiple audio samples in batches.
+If we record at a 16,000 Hz sampling rate and read 1,600 audio samples at a time, we can process 1,600 new audio samples every 0.1 second.
 If you implement this, it is as follows:
 
 ```kotlin
 // DeeplyRecorder
-
-
-// FIXME: this is impossible, just an example for explaining the concept
+val recorder = DeeplyRecorder(sampleRate = 16000, bufferSize = 1600)
+lifecycleOwner.launcu {
+    recorder.start().collect { audioSamples ->
+        runSomething() // called every 0.1 second, buffer contains 1,600 samples
+    }
+}
 ```
 
 ```kotlin
 // AudioRecord
+val SAMPLE_RATE = 16000
+val BUFFER_SIZE = 1600
 
-
-// FIXME: this is impossible, just an example for explaining the concept
+val buffer = ByteArray(BUFFER_SIZE)
+val record = AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, buffer.size)
+record.startRecording()
+while (true) {
+    val read = record.read(buffer, 0, buffer.size)
+    runSomething() // called every 0.1 second, buffer contains 1,600 samples
+}
 ```
 
-This will cause the `runSomething()` function above to be invoked every time 1,000 new audio samples are gathered in the buffer, i.e. every 0.1 second.
+This will cause the `runSomething()` function above to be invoked every time 1,600 new audio samples are gathered in the buffer, i.e. every 0.1 second.
 
 Then wouldn't it always be best to bring a minimal audio sample?
-If you run a task to update the UI in the `runSomething()` function, as shown in the example above, using the 1000 buffer size for the 10,000 Hz sampling rate can cause the UI to change every 0.1 second. 
+If you run a task to update the UI in the `runSomething()` function, as shown in the example above, using the 1600 buffer size for the 16,000 Hz sampling rate can cause the UI to change every 0.1 second. 
 But using a buffer size of 10 can cause the UI to change every 0.001 seconds. 
 If you set the sampling rate to 1,000,000 Hz and set the buffer size to 1, you can create a function that responds really fast to sounds!
 
 But in reality, that's impossible.
-This is because the characteristics of the microphone determine the sampling rate that can be set and the minimum number of samples that can be imported at a time, i.e. the minimum buffer size. 
+This is because the characteristics of the microphone and Android system determine the sampling rate that can be set and the minimum number of samples that can be imported at a time, i.e. the minimum buffer size. 
 
 Therefore, the buffer size must be the smallest possible size to make it respond as fast as possible at a particular sampling rate. 
 The `DeeplyRecorder` selects the minimum buffer size as the default value, so there is no need to set it up separately. 
 When creating an object, `AudioRecord` must first determine the minimum buffer size through the ` ` method and then set this value through the `AudioRecord` constructor.
 
 ```kotlin
+// DeeplyRecorder
+val recorder = DeeplyRecorder(sampleRate = 16000) // the buffer size will be set to the minimum size
+val bufferSize = recorder.getBufferSize() // if you want to know the buffer size
 ```
 
 ```kotlin
+// AudioRecord
+val SAMPLE_RATE = 16000
+val minBufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+val record = AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, minBufferSize)
 ```
 
 
@@ -105,7 +122,7 @@ If we set the size of the buffer to `10 * sampling rate` as shown below, the aud
 
 ```kotlin
 val sampleRate = 16000
-val recorder = DeeplyRecorder(bufferSize = 10 * 16000)
+val recorder = DeeplyRecorder(bufferSize = 10 * sampleRate)
 recorder.start().collect { audioSamples ->
     // audioSamples have 10 second length of audio samples
     buildWavFile(audioSamples)
@@ -121,19 +138,22 @@ Remembering that the number of audio samples means time can be of great help whe
 The Listen Sound Event AI analysis model was also created to match a specific sampling rate value.
 Therefore, for Listen Sound Event AI to be able to properly analyze, the recording function must also be implemented according to the pre-determined sampling rate of the AI model. 
 The Listen SDK provides sampling rates for AI models using the `getAudioParams()` method.
-If the recording function is implemented using `DeeplyRecorder`, it can be used as follows:
+If the recording function is implemented using `DeeplyRecorder` and you use simple inference method, it can be used as follows:
 
-```
+```kotlin
 val listen = Listen(this)
 listen.init("SDK_KEY", "DPL FILE ASSETS PATH")
 
-val sampleRate = listen.getAudioParams().sampleRate
-val recorder = DeeplyRecorder(sampleRate = sampleRate)
+val audioParams = listen.getAudioParams()
+val recorder = DeeplyRecorder(
+    sampleRate = audioParams.sampleRate, 
+    bufferSize = audioParams.inputSize
+)
 ```
 
 <!-- 
 Caution!
-The sampling rate value may vary depending on the file `.dpl`. 
+The sampling rate value may vary depending on the `.dpl` file. 
 If you use the recording function for both Listen and other purposes at the same time, you should write the code so that there is no problem even if the sampling rate changes during recording.
 -->
 
