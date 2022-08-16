@@ -31,10 +31,11 @@ You can get the required audio sample input size via `getAudioParams().inputSize
 If we want to detect a specific sound event in real-time, an asynchronous manner is better for sound event detection, especially because we cannot estimate when the sound event occurs.
 Asynchronous detection is performed in the following manner:
 
-1. Register sound events we want to detect
+1. Register a listener using `setAsyncInferenceListener()`
 2. Pass audio samples recorded in real-time to `inferenceAsync(audioSamples)`
 3. Listener or Kotlin coroutine will be invoked when the registered sound event is detected
 
+<!--
 ### Register sound events
 
 ```kotlin
@@ -46,7 +47,7 @@ listen.registerEvent("cough")
 The available sound events are listed in the documentation as well as the `getEventTypes()` method.
 
 ```kotlin
-
+val eventTypes: List<String> = listen.getEventTypes()
 ```
 
 
@@ -68,4 +69,4 @@ Listen provides two asynchronous detection methods: the listener-based method an
 ## Batch Inference
 
 If you don't need real-time sound event analysis, or if you need to analyze large amounts of sound data at once, it's better to use batch analysis that handles more data at once than the default analysis method.
-
+-->

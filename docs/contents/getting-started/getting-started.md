@@ -66,7 +66,7 @@ The above code works.
 However, in order to use Listen more reliably, we recommend to consider the following points together.
 
 
-### Blocking Thread Issue
+### Thread Blocking Issue
 
 The `init()` method internally performs various tasks such as SDK authentication and deep learning model loading. 
 This process may take several seconds depending on the device's performance and network status.
