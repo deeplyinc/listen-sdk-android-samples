@@ -7,6 +7,8 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Bundle
 import android.util.Log
+import android.view.WindowManager
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
@@ -16,7 +18,6 @@ import com.deeplyinc.listen.samples.basic.databinding.ActivitySimpleAudioRecordB
 import com.deeplyinc.listen.sdk.Listen
 import com.deeplyinc.listen.sdk.audio.classifiers.datastructures.ClassifierOutput
 import com.deeplyinc.listen.sdk.exceptions.ListenAuthException
-import com.deeplyinc.recorder.DeeplyRecorder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,16 +35,13 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) // Prevent screen off
         binding = DataBindingUtil.setContentView(this, R.layout.activity_simple_audio_record)
         binding.lifecycleOwner = this
 
         initialize()
-
         configureLayout()
-
-        DeeplyRecorder.requestRecordingPermission(this) {
-            Log.d(TAG, "Recording permission granted ")
-        }
+        requestRecordingPermission()
     }
 
     private fun initialize() {
@@ -74,6 +72,15 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
                 binding.start.text = "Stop"
             }
         }
+    }
+
+    private fun requestRecordingPermission() {
+        val permissionRequest = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                Log.d(TAG, "Recording permission is granted")
+            }
+        }
+        permissionRequest.launch(Manifest.permission.RECORD_AUDIO)
     }
 
     private fun startRecording() {

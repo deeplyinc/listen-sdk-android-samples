@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.WindowManager
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
@@ -33,17 +34,12 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) // Prevent screen off
-
         binding = DataBindingUtil.setContentView(this, R.layout.activity_simple_deeply_recorder)
         binding.lifecycleOwner = this
 
         initialize()
-
         configureLayout()
-
-        DeeplyRecorder.requestRecordingPermission(this) {
-            Log.d(TAG, "Recording permission granted ")
-        }
+        requestRecordingPermission()
     }
 
     private fun initialize() {
@@ -85,6 +81,15 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
                 binding.start.text = "Stop"
             }
         }
+    }
+
+    private fun requestRecordingPermission() {
+        val permissionRequest = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                Log.d(TAG, "Recording permission is granted")
+            }
+        }
+        permissionRequest.launch(Manifest.permission.RECORD_AUDIO)
     }
 
     private fun startRecording() {
