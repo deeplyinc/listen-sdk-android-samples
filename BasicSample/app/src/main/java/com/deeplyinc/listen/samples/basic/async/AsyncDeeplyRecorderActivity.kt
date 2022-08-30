@@ -50,14 +50,25 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.Default) {
             try {
                 listen.init("SDK KEY", "DPL ASSET PATH")
+
+                // You need to add a listener, because inferenceAsync() runs in asynchronous
+                // manner. We cannot know when Listen will give the inference result to us, so
+                // register the listener to handle the inference result.
+                // You can also use Kotlin coroutine to handle the inference result by using
+                // resultFlow(). In that case you don't need to register the listener.
                 listen.setAsyncInferenceListener(object : AudioEventClassificationListener {
                     override fun onDetected(result: ClassifierOutput) {
-                        handleResult(result)
+                        // handleResult(result)
                     }
                 })
 
                 recorder = DeeplyRecorder(
                     sampleRate = listen.getAudioParams().sampleRate
+                    // Note that buffer size is not specified. Then DeeplyRecord will use the
+                    // minimum available size of buffer. In asynchronous inference, we can freely
+                    // append any size of audio samples to the Listen. Listen will temporarily
+                    // store the audio samples and analyze them when the audio samples reach enough
+                    // size.
                 )
 
                 withContext(Dispatchers.Main) {
@@ -67,6 +78,7 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
 
+            // Receive the inference result using Kotlin flow.
             listen.resultFlow().collect {
                 handleResult(it)
             }
@@ -104,16 +116,12 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
             return
         } else {
             lifecycleScope.launch {
-                recorder.start().collect {
-                    accumulate(it)
+                recorder.start().collect { audioSamples ->
+                    // Run async inference
+                    listen.inferenceAsync(audioSamples)
                 }
             }
         }
-    }
-
-    private suspend fun accumulate(audioSamples: ShortArray) {
-        // run inference
-        listen.inferenceAsync(audioSamples)
     }
 
     private fun handleResult(result: ClassifierOutput) {

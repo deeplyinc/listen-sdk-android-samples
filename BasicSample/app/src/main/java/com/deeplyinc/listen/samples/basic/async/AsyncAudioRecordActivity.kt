@@ -53,10 +53,16 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.Default) {
             try {
                 listen.init("SDK KEY", "DPL ASSET PATH")
+
+                // You need to add a listener, because inferenceAsync() runs in asynchronous
+                // manner. We cannot know when Listen will give the inference result to us, so
+                // register the listener to handle the inference result.
+                // You can also use Kotlin coroutine to handle the inference result by using
+                // resultFlow(). In that case you don't need to register the listener.
                 listen.setAsyncInferenceListener(object : AudioEventClassificationListener {
                     override fun onDetected(result: ClassifierOutput) {
                         lifecycleScope.launch(Dispatchers.Main) {
-                            handleResult(result)
+                            // handleResult(result)
                         }
                     }
                 })
@@ -68,6 +74,7 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
 
+            // Receive the inference result using Kotlin flow.
             listen.resultFlow().collect {
                 withContext(Dispatchers.Main) {
                     handleResult(it)
@@ -103,17 +110,28 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
             return
         }
 
-        val bufferSize = listen.getAudioParams().inputSize
-        val buffer = ShortArray(bufferSize)
+        val channel = AudioFormat.CHANNEL_IN_MONO
+        val audioFormat = AudioFormat.ENCODING_PCM_16BIT
+
+        // Note that buffer size is set to minBufferSize, because in asynchronous inference,
+        // we can freely append any size of audio samples to the Listen. Listen will temporarily
+        // store the audio samples and analyze them when the audio samples reach enough size.
+        val minBufferSize = AudioRecord.getMinBufferSize(
+            listen.getAudioParams().sampleRate,channel,
+            audioFormat
+        )
+        val buffer = ShortArray(minBufferSize)
         val sampleRate = listen.getAudioParams().sampleRate
-        audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize)
+        audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, channel, audioFormat, minBufferSize)
         audioRecord.startRecording()
         isRecording = true
         lifecycleScope.launch(Dispatchers.Default) {
             while (isRecording) {
-                // called every 0.1 second, buffer contains 1,000 samples
+                // Read the audio samples into buffer
                 audioRecord.read(buffer, 0, buffer.size)
-                accumulate(buffer)
+
+                // Run async inference
+                listen.inferenceAsync(buffer)
             }
         }
     }
@@ -122,11 +140,6 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
         isRecording = false
         audioRecord.stop()
         audioRecord.release()
-    }
-
-    private suspend fun accumulate(audioSamples: ShortArray) {
-        // run inference
-        listen.inferenceAsync(audioSamples)
     }
 
     private fun handleResult(result: ClassifierOutput) {
