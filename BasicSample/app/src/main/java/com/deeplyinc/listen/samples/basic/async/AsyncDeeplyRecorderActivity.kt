@@ -26,10 +26,11 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
         private const val TAG = "AsyncDeeplyRecorderActivity"
     }
 
-    private lateinit var binding: ActivityBasicBinding
-
     private val listen = Listen(this)
-    private lateinit var recorder: DeeplyRecorder
+
+    private var recorder: DeeplyRecorder? = null
+
+    private lateinit var binding: ActivityBasicBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,17 +40,25 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
 
         initialize()
         configureLayout()
+
         requestRecordingPermission()
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        stopRecording()
     }
 
     private fun initialize() {
         binding.start.isEnabled = false
+
         // Note that the init() takes time and blocks the thread during the initialization
         // process because it contains networking and file operations.
         // We recommend to call init() in the other thread like the following code.
         lifecycleScope.launch(Dispatchers.Default) {
             try {
-                listen.init("SDK KEY", "DPL ASSET PATH")
+                listen.load("SDK KEY", "DPL ASSET PATH")
 
                 // You need to add a listener, because inferenceAsync() runs in asynchronous
                 // manner. We cannot know when Listen will give the inference result to us, so
@@ -58,14 +67,13 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
                 // resultFlow(). In that case you don't need to register the listener.
                 listen.setAsyncInferenceListener(object : AudioEventClassificationListener {
                     override fun onDetected(result: ClassifierOutput) {
-                        // handleResult(result)
+                        Log.d(TAG, "Results handled by listener: $result")
                     }
                 })
 
                 recorder = DeeplyRecorder(
-                    sampleRate = listen.getAudioParams().sampleRate
-                    // Note that buffer size is not specified. Then DeeplyRecord will use the
-                    // minimum available size of buffer. In asynchronous inference, we can freely
+                    sampleRate = listen.getAudioParams().sampleRate,
+                    // Note that buffer size is not specified. In asynchronous inference, we can freely
                     // append any size of audio samples to the Listen. Listen will temporarily
                     // store the audio samples and analyze them when the audio samples reach enough
                     // size.
@@ -80,6 +88,7 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
 
             // Receive the inference result using Kotlin flow.
             listen.resultFlow().collect {
+                Log.d(TAG, "Results handled by Kotlin Flow: $it")
                 handleResult(it)
             }
         }
@@ -87,8 +96,8 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
 
     private fun configureLayout() {
         binding.start.setOnClickListener {
-            if (recorder.isRecording()) {
-                recorder.stop()
+            if (recorder?.isRecording() == true) {
+                stopRecording()
                 binding.start.text = "Start"
             } else {
                 startRecording()
@@ -116,7 +125,7 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
             return
         } else {
             lifecycleScope.launch {
-                recorder.start().collect { audioSamples ->
+                recorder?.start()?.collect { audioSamples ->
                     // Run async inference
                     listen.inferenceAsync(audioSamples)
                 }
@@ -124,13 +133,17 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
         }
     }
 
-    private fun handleResult(result: ClassifierOutput) {
-        // print result
-        Log.d(TAG, "Inference result: ${result.event} ${result.confidence}")
-        Log.d(TAG, "All results: ${result.rawResults}")
+    private fun stopRecording() {
+        if (recorder?.isRecording() == true) {
+            recorder?.stop()
+        }
+    }
 
-        // update UI
-        binding.event.text = result.event
-        binding.confidence.text = String.format("%.2f%%", result.confidence * 100.0)
+    private suspend fun handleResult(result: ClassifierOutput) {
+        withContext(Dispatchers.Main) {
+            // update UI
+            binding.event.text = result.event
+            binding.confidence.text = String.format("%.2f%%", result.confidence * 100.0)
+        }
     }
 }

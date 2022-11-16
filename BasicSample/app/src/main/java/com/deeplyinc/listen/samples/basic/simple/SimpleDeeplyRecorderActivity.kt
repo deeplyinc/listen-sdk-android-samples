@@ -25,10 +25,11 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
         private const val TAG = "SimpleDeeplyRecorder"
     }
 
-    private lateinit var binding: ActivityBasicBinding
-
     private val listen = Listen(this)
-    private lateinit var recorder: DeeplyRecorder
+
+    private var recorder: DeeplyRecorder? = null
+
+    private lateinit var binding: ActivityBasicBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,21 +39,29 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
 
         initialize()
         configureLayout()
+
         requestRecordingPermission()
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        stopRecording()
     }
 
     private fun initialize() {
         binding.start.isEnabled = false
+
         // Note that the init() takes time and blocks the thread during the initialization
         // process because it contains networking and file operations.
         // We recommend to call init() in the other thread like the following code.
         lifecycleScope.launch(Dispatchers.Default) {
             try {
-                listen.init("SDK KEY", "DPL ASSET PATH")
+                listen.load("SDK KEY", "DPL ASSET PATH")
 
                 recorder = DeeplyRecorder(
                     sampleRate = listen.getAudioParams().sampleRate,
-                    bufferSize = listen.getAudioParams().inputSize
+                    bufferSize = listen.getAudioParams().minInputSize
                 )
 
                 withContext(Dispatchers.Main) {
@@ -66,8 +75,8 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
 
     private fun configureLayout() {
         binding.start.setOnClickListener {
-            if (recorder.isRecording()) {
-                recorder.stop()
+            if (recorder?.isRecording() == true) {
+                stopRecording()
                 binding.start.text = "Start"
             } else {
                 startRecording()
@@ -95,28 +104,29 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
             return
         } else {
             lifecycleScope.launch {
-                recorder.start().collect {
-                    runInference(it)
+                recorder?.start()?.collect {
+                    val results = listen.inference(it)
+                    Log.d(TAG, "Results: $results")
+
+                    handleResults(results)
                 }
             }
         }
     }
 
-    private suspend fun runInference(audioSamples: ShortArray) {
-        // run inference
-        val result = listen.inference(audioSamples)
-        withContext(Dispatchers.Main) {
-            handleResult(result)
+    private fun stopRecording() {
+        if (recorder?.isRecording() == true) {
+            recorder?.stop()
         }
     }
 
-    private fun handleResult(result: ClassifierOutput) {
-        // print result
-        Log.d(TAG, "Inference result: ${result.event} ${result.confidence}")
-        Log.d(TAG, "All results: ${result.rawResults}")
-
-        // update UI
-        binding.event.text = result.event
-        binding.confidence.text = String.format("%.2f%%", result.confidence * 100.0)
+    private suspend fun handleResults(results: List<ClassifierOutput>) {
+        withContext(Dispatchers.Main) {
+            for (result in results) {
+                // update UI
+                binding.event.text = result.event
+                binding.confidence.text = String.format("%.2f%%", result.confidence * 100.0)
+            }
+        }
     }
 }

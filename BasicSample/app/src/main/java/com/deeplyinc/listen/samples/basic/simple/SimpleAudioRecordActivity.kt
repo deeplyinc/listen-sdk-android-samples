@@ -27,11 +27,12 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
         private const val TAG = "SimpleAudioRecordActivity"
     }
 
-    private lateinit var binding: ActivityBasicBinding
-
     private val listen = Listen(this)
-    private lateinit var audioRecord: AudioRecord
+
+    private var audioRecord: AudioRecord? = null
     private var isRecording = false
+
+    private lateinit var binding: ActivityBasicBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,30 +40,20 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
         binding = DataBindingUtil.setContentView(this, R.layout.activity_basic)
         binding.lifecycleOwner = this
 
-        initialize()
         configureLayout()
+        initialize()
+
         requestRecordingPermission()
     }
 
-    private fun initialize() {
-        binding.start.isEnabled = false
-        // Note that the init() takes time and blocks the thread during the initialization
-        // process because it contains networking and file operations.
-        // We recommend to call init() in the other thread like the following code.
-        lifecycleScope.launch(Dispatchers.Default) {
-            try {
-                listen.init("SDK KEY", "DPL ASSET PATH")
+    override fun onStop() {
+        super.onStop()
 
-                withContext(Dispatchers.Main) {
-                    binding.start.isEnabled = true
-                }
-            } catch (e: ListenAuthException) {
-                e.printStackTrace()
-            }
-        }
+        stopRecording()
     }
 
     private fun configureLayout() {
+        binding.start.isEnabled = false
         binding.start.setOnClickListener {
             if (isRecording) {
                 stopRecording()
@@ -70,6 +61,23 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
             } else {
                 startRecording()
                 binding.start.text = "Stop"
+            }
+        }
+    }
+
+    private fun initialize() {
+        // Note that the init() takes time and blocks the thread during the initialization
+        // process because it contains networking and file operations.
+        // We recommend to call init() in the other thread like the following code.
+        lifecycleScope.launch(Dispatchers.Default) {
+            try {
+                listen.load("SDK KEY", "DPL ASSET PATH")
+
+                withContext(Dispatchers.Main) {
+                    binding.start.isEnabled = true
+                }
+            } catch (e: ListenAuthException) {
+                e.printStackTrace()
             }
         }
     }
@@ -89,46 +97,49 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
             return
         }
 
-        val bufferSize = listen.getAudioParams().inputSize
+        val bufferSize = listen.getAudioParams().minInputSize
         val buffer = ShortArray(bufferSize)
         val sampleRate = listen.getAudioParams().sampleRate
-        audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize)
-        if (audioRecord.state == AudioRecord.STATE_UNINITIALIZED) {
+        audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, buffer.size)
+        if (audioRecord?.state == AudioRecord.STATE_UNINITIALIZED) {
             Log.w(TAG, "Failed to initialize AudioRecord", )
             return
         }
-        audioRecord.startRecording()
+        audioRecord?.startRecording()
         isRecording = true
+
         lifecycleScope.launch(Dispatchers.Default) {
             while (isRecording) {
                 // called every 0.1 second, buffer contains 1,000 samples
-                audioRecord.read(buffer, 0, buffer.size)
-                runInference(buffer)
+                audioRecord?.read(buffer, 0, buffer.size)
+
+                // Run inference. Please note that inference is time-consuming task, so running
+                // inference in the main thread results in thread blocking issue.
+                val results = listen.inference(buffer)
+                Log.d(TAG, "Results: $results")
+
+                handleResults(results)
             }
         }
     }
 
     private fun stopRecording() {
-        isRecording = false
-        audioRecord.stop()
-        audioRecord.release()
-    }
-
-    private suspend fun runInference(audioSamples: ShortArray) {
-        // run inference
-        val result = listen.inference(audioSamples)
-        withContext(Dispatchers.Main) {
-            handleResult(result)
+        if (isRecording) {
+            isRecording = false
+        }
+        if (audioRecord != null && audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+            audioRecord?.stop()
+            audioRecord?.release()
         }
     }
 
-    private fun handleResult(result: ClassifierOutput) {
-        // print result
-        Log.d(TAG, "Inference result: ${result.event} ${result.confidence}")
-        Log.d(TAG, "All results: ${result.rawResults}")
-
-        // update UI
-        binding.event.text = result.event
-        binding.confidence.text = String.format("%.2f%%", result.confidence * 100.0)
+    private suspend fun handleResults(results: List<ClassifierOutput>) {
+        withContext(Dispatchers.Main) {
+            for (result in results) {
+                // update UI
+                binding.event.text = result.event
+                binding.confidence.text = String.format("%.2f%%", result.confidence * 100.0)
+            }
+        }
     }
 }

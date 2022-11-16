@@ -28,11 +28,12 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
         private const val TAG = "AsyncAudioRecordActivity"
     }
 
-    private lateinit var binding: ActivityBasicBinding
-
     private val listen = Listen(this)
-    private lateinit var audioRecord: AudioRecord
+
+    private var audioRecord: AudioRecord? = null
     private var isRecording = false
+
+    private lateinit var binding: ActivityBasicBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,19 +41,38 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
         binding = DataBindingUtil.setContentView(this, R.layout.activity_basic)
         binding.lifecycleOwner = this
 
-        initialize()
         configureLayout()
+        initialize()
+
         requestRecordingPermission()
     }
 
-    private fun initialize() {
+    override fun onStop() {
+        super.onStop()
+
+        stopRecording()
+    }
+
+    private fun configureLayout() {
         binding.start.isEnabled = false
+        binding.start.setOnClickListener {
+            if (isRecording) {
+                stopRecording()
+                binding.start.text = "Start"
+            } else {
+                startRecording()
+                binding.start.text = "Stop"
+            }
+        }
+    }
+
+    private fun initialize() {
         // Note that the init() takes time and blocks the thread during the initialization
         // process because it contains networking and file operations.
         // We recommend to call init() in the other thread like the following code.
         lifecycleScope.launch(Dispatchers.Default) {
             try {
-                listen.init("SDK KEY", "DPL ASSET PATH")
+                listen.load("SDK KEY", "DPL ASSET PATH")
 
                 // You need to add a listener, because inferenceAsync() runs in asynchronous
                 // manner. We cannot know when Listen will give the inference result to us, so
@@ -61,9 +81,7 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
                 // resultFlow(). In that case you don't need to register the listener.
                 listen.setAsyncInferenceListener(object : AudioEventClassificationListener {
                     override fun onDetected(result: ClassifierOutput) {
-                        lifecycleScope.launch(Dispatchers.Main) {
-                            // handleResult(result)
-                        }
+                        Log.d(TAG, "Results handled by listener: $result")
                     }
                 })
 
@@ -76,21 +94,8 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
 
             // Receive the inference result using Kotlin flow.
             listen.resultFlow().collect {
-                withContext(Dispatchers.Main) {
-                    handleResult(it)
-                }
-            }
-        }
-    }
-
-    private fun configureLayout() {
-        binding.start.setOnClickListener {
-            if (isRecording) {
-                stopRecording()
-                binding.start.text = "Start"
-            } else {
-                startRecording()
-                binding.start.text = "Stop"
+                Log.d(TAG, "Results handled by Kotlin Flow: $it")
+                handleResults(it)
             }
         }
     }
@@ -113,26 +118,26 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
         val channel = AudioFormat.CHANNEL_IN_MONO
         val audioFormat = AudioFormat.ENCODING_PCM_16BIT
 
-        // Note that buffer size is set to minBufferSize, because in asynchronous inference,
-        // we can freely append any size of audio samples to the Listen. Listen will temporarily
-        // store the audio samples and analyze them when the audio samples reach enough size.
         val minBufferSize = AudioRecord.getMinBufferSize(
             listen.getAudioParams().sampleRate,channel,
             audioFormat
         )
-        val buffer = ShortArray(minBufferSize)
+        // Note that buffer size is set to 2 * minBufferSize, because in asynchronous inference,
+        // we can freely append any size of audio samples to the Listen. Listen will temporarily
+        // store the audio samples and analyze them when the audio samples reach enough size.
+        val buffer = ShortArray(2 * minBufferSize)
         val sampleRate = listen.getAudioParams().sampleRate
-        audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, channel, audioFormat, minBufferSize)
-        audioRecord.startRecording()
+        audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, channel, audioFormat, buffer.size)
         if (audioRecord?.state == AudioRecord.STATE_UNINITIALIZED) {
             Log.w(TAG, "Failed to initialize AudioRecord", )
             return
         }
+        audioRecord?.startRecording()
         isRecording = true
         lifecycleScope.launch(Dispatchers.Default) {
             while (isRecording) {
                 // Read the audio samples into buffer
-                audioRecord.read(buffer, 0, buffer.size)
+                audioRecord?.read(buffer, 0, buffer.size)
 
                 // Run async inference
                 listen.inferenceAsync(buffer)
@@ -141,18 +146,20 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
     }
 
     private fun stopRecording() {
-        isRecording = false
-        audioRecord.stop()
-        audioRecord.release()
+        if (isRecording) {
+            isRecording = false
+        }
+        if (audioRecord != null && audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+            audioRecord?.stop()
+            audioRecord?.release()
+        }
     }
 
-    private fun handleResult(result: ClassifierOutput) {
-        // print result
-        Log.d(TAG, "Inference result: ${result.event} ${result.confidence}")
-        Log.d(TAG, "All results: ${result.rawResults}")
-
-        // update UI
-        binding.event.text = result.event
-        binding.confidence.text = String.format("%.2f%%", result.confidence * 100.0)
+    private suspend fun handleResults(result: ClassifierOutput) {
+        withContext(Dispatchers.Main) {
+            // update UI
+            binding.event.text = result.event
+            binding.confidence.text = String.format("%.2f%%", result.confidence * 100.0)
+        }
     }
 }
