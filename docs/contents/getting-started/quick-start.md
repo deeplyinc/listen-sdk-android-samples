@@ -5,10 +5,10 @@ In addition to the analysis capabilities, there are many other features that nee
 The Listen SDK comes with a variety of tools that make it easy to use all the features needed to analyze sound events. 
 This article introduces the way to quickly implement Sound event analysis by using these tools.
 
-Of course, even if you don't use the tools provided by the Listen SDK and implement them directly in the way provided by the Android framework, you can use the same Listen sound analysis function.
+Of course, even if you don't use the tools provided by the Listen SDK and implement them directly in the way provided by the Android framework, you can use the same Listen sound analysis functionality.
 The direct implementation in the manner provided by the Android framework will be described in more detail in the following documentation.
 
-We assume that you already have an SDK key and `.dpl` file that is provided after service registration. 
+We assume that you already have an SDK key and `.dpl` file that are provided after service registration. 
 
 
 
@@ -21,6 +21,7 @@ implementation "com.deeplyinc.listen.sdk:listen:VERSION"
 ```
 
 
+
 ## Add Permissions
 
 `RECORD_AUDIO` and `INTERNET` permissions are required to use Listen.
@@ -30,6 +31,7 @@ Declare permission to file `AndroidManifest.xml` as follows:
 <uses-permission android:name="android.permission.INTERNET" />
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
 ```
+
 
 
 ## Listen Initialization
@@ -46,16 +48,20 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         ... 
 
-        // Initialize Listen with SDK key and .dpl file
+        // Initialize Listen SDK with SDK key and .dpl file
+        // This example code is only for giving quick understanding of how we can use Listen SDK. 
+        // If the .dpl file is large, it will take a long time to load .dpl file, 
+        // so it is not recommended to use load() method on main thread in practical use. 
         listen = Listen(this)
-        listen.init("SDK KEY", "DPL FILE ASSETS PATH")
+        listen.load("SDK KEY", "DPL ASSET PATH")
     }
 }
 
 ```
 
 
-## Audio recordings
+
+## Audio Recordings
 
 To use Listen's sound analysis, you must implement a recording function.
 This section describes how to implement it using the `DeeplyRecorder` that comes with the Listen SDK.
@@ -63,6 +69,19 @@ If you want to find out how to implement it directly using `AudioRecord` provide
 If the recording function is already implemented, you can skip this part. 
 
 Before implementing the recording function, you must first implement the function that asks the user for permission to record as follows:
+
+```xml
+<!-- AndroidManifest.xml -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- RECORD_AUDIO permission -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    ...
+
+</manifest>
+```
 
 ```kotlin
 class MainActivity : AppCompatActivity() {
@@ -74,14 +93,19 @@ class MainActivity : AppCompatActivity() {
         ...
 
         listen = Listen(this)
-        listen.init("SDK KEY", "DPL FILE ASSETS PATH")
+        listen.load("SDK KEY", "DPL ASSET PATH")
 
-        // request audio recording permission
-        DeeplyRecorder.requestAudioPermission() { isGranted ->
+        // Request recording permission
+        requestRecordingPermission()
+    }
+
+    private fun requestRecordingPermission() {
+        val permissionRequest = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
-                // RECORD_AUDIO permission is granted
+                Log.d(TAG, "Recording permission is granted")
             }
         }
+        permissionRequest.launch(Manifest.permission.RECORD_AUDIO)
     }
 }
 ```
@@ -99,21 +123,29 @@ class MainActivity : AppCompatActivity() {
         ...
 
         listen = Listen(this)
-        listen.init("SDK KEY", "DPL FILE ASSETS PATH")
+        listen.load("SDK KEY", "DPL ASSET PATH")
 
-        DeeplyRecorder.requestAudioPermission() { isGranted ->
+        requestRecordingPermission()
+    }
+
+    private fun requestRecordingPermission() {
+        val permissionRequest = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
+                Log.d(TAG, "Recording permission is granted")
+                
                 // start recording if the user grants the permission
                 startRecording()
             }
         }
+        permissionRequest.launch(Manifest.permission.RECORD_AUDIO)
     }
 
     private fun startRecording() {
         val sampleRate = listen.getAudioParams().sampleRate
+        val minInputSize = listen.getAudioParams().minInputSize
         val recorder = DeeplyRecorder(
             sampleRate = sampleRate,
-            bufferSize = sampleRate
+            bufferSize = minInputSize
         )
         recorder.start().collect { audioSamples ->
             // recording started!
@@ -121,6 +153,7 @@ class MainActivity : AppCompatActivity() {
     }
 }
 ```
+
 
 
 ## Sound Analysis
@@ -131,14 +164,23 @@ We're going to talk about it in the simplest way, the basic analysis way.
 Refer to the Sound Event Analysis documentation for a detailed description of the different analysis methods provided by Listen.
 
 ```kotlin
-recorder.start().collect { audioSamples ->
-    val result = listen.inference(audioSamples)
-    Log.d("Listen", result)
+private fun startRecording() {
+    val sampleRate = listen.getAudioParams().sampleRate
+    val minInputSize = listen.getAudioParams().minInputSize
+    val recorder = DeeplyRecorder(
+        sampleRate = sampleRate,
+        bufferSize = minInputSize
+    )
+    recorder.start().collect { audioSamples ->
+        val results = listen.inference(audioSamples)
+        // Inference results here!
+        Log.d("Listen", results)
+    }
 }
 ```
 
 Analysis completed!
-The data recorded in real time is now continuously coming in through the `audioSamples` value, which can be passed to the `inference()` function to see the result through the `result` variable!
+The data recorded in real time is now continuously coming in through the `audioSamples` value, which can be passed to the `inference()` function to see the result through the `results` variable!
 
 Now all we have to do is make your app even better. 
 

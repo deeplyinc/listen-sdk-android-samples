@@ -45,7 +45,7 @@ If you implement this, it is as follows:
 ```kotlin
 // DeeplyRecorder
 val recorder = DeeplyRecorder(sampleRate = 16000, bufferSize = 1600)
-lifecycleOwner.launcu {
+lifecycleOwner.launch {
     recorder.start().collect { audioSamples ->
         runSomething() // called every 0.1 second, buffer contains 1,600 samples
     }
@@ -77,8 +77,8 @@ But in reality, that's impossible.
 This is because the characteristics of the microphone and Android system determine the sampling rate that can be set and the minimum number of samples that can be imported at a time, i.e. the minimum buffer size. 
 
 Therefore, the buffer size must be the smallest possible size to make it respond as fast as possible at a particular sampling rate. 
-The `DeeplyRecorder` selects the minimum buffer size as the default value, so there is no need to set it up separately. 
-When creating an object, `AudioRecord` must first determine the minimum buffer size through the ` ` method and then set this value through the `AudioRecord` constructor.
+The `DeeplyRecorder` selects (2 * the minimum buffer size) as the default value, which is quite small size for fast response, so there is usually no need to set it up separately. 
+When creating an object, `AudioRecord` must first determine the buffer size through the `udioRecord.getMinBufferSize()` method and then set buffer size through the `AudioRecord` constructor.
 
 ```kotlin
 // DeeplyRecorder
@@ -142,12 +142,12 @@ If the recording function is implemented using `DeeplyRecorder` and you use simp
 
 ```kotlin
 val listen = Listen(this)
-listen.init("SDK_KEY", "DPL FILE ASSETS PATH")
+listen.load("SDK_KEY", "DPL FILE ASSETS PATH")
 
 val audioParams = listen.getAudioParams()
 val recorder = DeeplyRecorder(
     sampleRate = audioParams.sampleRate, 
-    bufferSize = audioParams.inputSize
+    bufferSize = audioParams.minInputSize
 )
 ```
 

@@ -5,10 +5,11 @@ We assume that we have already finished the initialization and audio recording p
 
 ```kotlin
 val listen = Listen(context)
-listen.initialze("SDK_KEY", "MODEL_ASSETS_PATH")
+listen.load("SDK_KEY", "MODEL_ASSETS_PATH")
 
 val audioSamples = getAudioSamplesForMic() // get audio samples from mic using AudioRecord
 ```
+
 
 
 ## Simple Inference
@@ -16,14 +17,14 @@ val audioSamples = getAudioSamplesForMic() // get audio samples from mic using A
 The simplest and most straightforward method is synchronous inference.
 
 ```kotlin
-// audioSamples must have fixed (pre-defined) sample rate and input size, 
-// which is available from listen.getAudioParams().sampleRate and 
-// listen.getAudioParams().inputSize, respectively.
-val result = listen.analyze(audioSamples) 
+// audioSamples must have fixed (pre-defined) sample rate and must be larger than or equal to the minimum input size, 
+// which are available from listen.getAudioParams().sampleRate and listen.getAudioParams().minInputSize, respectively.
+val results = listen.inference(audioSamples) 
 ```
 
-Please note that this simple inference method runs a single inference with fixed-length audio samples, so the size of input audio samples must match the required size.
-You can get the required audio sample input size via `getAudioParams().inputSize` property.
+Please note that this simple inference method `inference()` runs multiple inferences with variable-length audio samples which is at least `minInpustSize`.
+You can get the minimum audio sample input size via `getAudioParams().minInputSize` property.
+
 
 
 ## Asynchronous Inference
