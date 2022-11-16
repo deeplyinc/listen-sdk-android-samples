@@ -67,9 +67,9 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
     }
 
     private fun initialize() {
-        // Note that the init() takes time and blocks the thread during the initialization
+        // Note that the load() takes time and blocks the thread during the initialization
         // process because it contains networking and file operations.
-        // We recommend to call init() in the other thread like the following code.
+        // We recommend to call load() in the other thread like the following code.
         lifecycleScope.launch(Dispatchers.Default) {
             try {
                 listen.load("SDK KEY", "DPL ASSET PATH")
