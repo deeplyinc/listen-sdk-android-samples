@@ -35,12 +35,6 @@
                 android:layout_height="wrap_content"
                 android:text="Start" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Result will be shown in 3 second after starting"
-                android:textSize="14sp" />
-
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
