@@ -124,6 +124,10 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
         val sampleRate = listen.getAudioParams().sampleRate
         audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, channel, audioFormat, minBufferSize)
         audioRecord.startRecording()
+        if (audioRecord?.state == AudioRecord.STATE_UNINITIALIZED) {
+            Log.w(TAG, "Failed to initialize AudioRecord", )
+            return
+        }
         isRecording = true
         lifecycleScope.launch(Dispatchers.Default) {
             while (isRecording) {

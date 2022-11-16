@@ -93,6 +93,10 @@ class SimpleAudioRecordActivity : AppCompatActivity() {
         val buffer = ShortArray(bufferSize)
         val sampleRate = listen.getAudioParams().sampleRate
         audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize)
+        if (audioRecord.state == AudioRecord.STATE_UNINITIALIZED) {
+            Log.w(TAG, "Failed to initialize AudioRecord", )
+            return
+        }
         audioRecord.startRecording()
         isRecording = true
         lifecycleScope.launch(Dispatchers.Default) {
