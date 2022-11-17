@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- Only when foreground service is used -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -16,6 +19,20 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.BasicSample"
         tools:targetApi="31">
+
+        <service
+            android:name=".service.RecordingForegroundService"
+            android:enabled="true"
+            android:exported="true"
+            android:foregroundServiceType="microphone" />
+
+        <activity
+            android:name=".service.ForegroundServiceActivity"
+            android:exported="false">
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
+        </activity>
         <activity
             android:name=".async.AsyncDeeplyRecorderActivity"
             android:exported="false" />
