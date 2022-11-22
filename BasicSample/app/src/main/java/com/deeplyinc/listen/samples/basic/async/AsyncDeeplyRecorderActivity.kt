@@ -125,7 +125,8 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
             return
         } else {
             lifecycleScope.launch {
-                recorder?.start()?.collect { audioSamples ->
+                recorder?.start()?.collect {
+                    val audioSamples = it.map { it.toDouble() }.toDoubleArray()
                     // Run async inference
                     listen.inferenceAsync(audioSamples)
                 }

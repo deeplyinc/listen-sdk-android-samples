@@ -105,7 +105,8 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
         } else {
             lifecycleScope.launch {
                 recorder?.start()?.collect {
-                    val results = listen.inference(it)
+                    val audioSamples = it.map { it.toDouble() }.toDoubleArray()
+                    val results = listen.inference(audioSamples)
                     Log.d(TAG, "Results: $results")
 
                     handleResults(results)
