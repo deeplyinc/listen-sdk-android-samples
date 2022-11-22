@@ -65,7 +65,7 @@ listen.load("SDK KEY", "listen.dpl")
 ```
 
 The above code works.
-However, in order to use Listen more reliably, we recommend to consider the following points.
+However, in order to use Listen more reliably, we recommend considering the following points.
 
 
 ### Thread Blocking Issue
@@ -75,7 +75,7 @@ This process may take several seconds depending on the device's performance and 
 Because initialization operations are synchronous rather than asynchronous, threads can be blocked while processing these operations.
 Therefore, if initialization is performed on the main thread, [ANR (Application Not Responding)] (https://developer.android.com/topic/performance/vitals/anr) may occur due to thread blocking.
 
-To solve this problem, we recommend to run the `load()` function in a separate thread.
+To solve this problem, we recommend runnig the `load()` function in a separate thread.
 Below is an example using Kotlin coroutines.
 
 ```kotlin
@@ -119,7 +119,7 @@ class MainActivity : AppCompatActivity() {
 
         // Note that the load() takes time and blocks the thread during the initialization
         // process because it contains networking and file operations.
-        // We recommending call load() in other thread like the following code.
+        // We recommend calling load() in other thread like the following code.
         lifecycleScope.launch(Dispatchers.Default) {
             try {
                 // Initialize Listen with SDK key and .dpl file
