@@ -12,6 +12,15 @@ All notable changes to Listen SDK for Android will be documented in this file.
 
 
 
+
+## [1.0.3] - 2023-01-30
+
+### Fixed
+
+- Fix a bug in loading .dpl file
+
+
+
 ## [1.0.2] - 2022-11-16
 
 ### Fixed
