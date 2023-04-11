@@ -23,14 +23,18 @@ class ForegroundServiceActivity : AppCompatActivity() {
         binding.lifecycleOwner = this
 
         binding.start.setOnClickListener {
-            startForegroundService(Intent(this, RecordingForegroundService::class.java))
+            startForegroundService(
+                Intent(this, RecordingForegroundService::class.java)
+            )
         }
 
         requestRecordingPermission()
     }
 
     private fun requestRecordingPermission() {
-        val permissionRequest = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        val permissionRequest = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
             if (isGranted) {
                 Log.d(TAG, "Recording permission is granted")
             }

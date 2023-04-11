@@ -27,9 +27,7 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
     }
 
     private val listen = Listen(this)
-
-    private var recorder: DeeplyRecorder? = null
-
+    private val recorder = DeeplyRecorder()
     private lateinit var binding: ActivityBasicBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,13 +69,7 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
                     }
                 })
 
-                recorder = DeeplyRecorder(
-                    sampleRate = listen.getAudioParams().sampleRate,
-                    // Note that buffer size is not specified. In asynchronous inference, we can freely
-                    // append any size of audio samples to the Listen. Listen will temporarily
-                    // store the audio samples and analyze them when the audio samples reach enough
-                    // size.
-                )
+                initRecorder(sampleRate = listen.getAudioParams().sampleRate)
 
                 withContext(Dispatchers.Main) {
                     binding.start.isEnabled = true
@@ -85,8 +77,9 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
             } catch (e: ListenAuthException) {
                 e.printStackTrace()
             }
+        }
 
-            // Receive the inference result using Kotlin flow.
+        lifecycleScope.launch(Dispatchers.Default) {
             listen.resultFlow().collect {
                 Log.d(TAG, "Results handled by Kotlin Flow: $it")
                 handleResult(it)
@@ -94,9 +87,28 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
         }
     }
 
+    private fun initRecorder(sampleRate: Int) {
+        if (ActivityCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestRecordingPermission()
+
+            return
+        }
+        // Note that buffer size is not specified. In asynchronous inference, we can freely
+        // append any size of audio samples to the Listen. Listen will temporarily
+        // store the audio samples and analyze them when the audio samples reach enough
+        // size.
+        recorder.init(
+            sampleRate = sampleRate,
+        )
+    }
+
     private fun configureLayout() {
         binding.start.setOnClickListener {
-            if (recorder?.isRecording() == true) {
+            if (recorder.isRecording()) {
                 stopRecording()
                 binding.start.text = "Start"
             } else {
@@ -124,9 +136,8 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
             Log.w(TAG, "Recording permission is not granted ")
             return
         } else {
-            lifecycleScope.launch {
-                recorder?.start()?.collect {
-                    val audioSamples = it.map { it.toDouble() }.toDoubleArray()
+            lifecycleScope.launch(Dispatchers.Default) {
+                recorder.start().collect { audioSamples ->
                     // Run async inference
                     listen.inferenceAsync(audioSamples)
                 }
@@ -135,8 +146,8 @@ class AsyncDeeplyRecorderActivity : AppCompatActivity() {
     }
 
     private fun stopRecording() {
-        if (recorder?.isRecording() == true) {
-            recorder?.stop()
+        if (recorder.isRecording()) {
+            recorder.stop()
         }
     }
 

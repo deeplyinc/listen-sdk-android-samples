@@ -64,7 +64,13 @@ class RecordingForegroundService : Service() {
             val bufferSize = listen.getAudioParams().minInputSize
             val buffer = ShortArray(bufferSize)
             val sampleRate = listen.getAudioParams().sampleRate
-            audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, buffer.size)
+            audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                sampleRate,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                buffer.size
+            )
             if (audioRecord?.state == AudioRecord.STATE_UNINITIALIZED) {
                 Log.w(TAG, "Failed to initialize AudioRecord", )
                 return@Runnable

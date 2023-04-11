@@ -101,17 +101,19 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
     }
 
     private fun requestRecordingPermission() {
-        val permissionRequest = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                Log.d(TAG, "Recording permission is granted")
+        val permissionRequest =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+                if (isGranted) {
+                    Log.d(TAG, "Recording permission is granted")
+                }
             }
-        }
         permissionRequest.launch(Manifest.permission.RECORD_AUDIO)
     }
 
     private fun startRecording() {
-        if (ActivityCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)
-            != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
             return
         }
 
@@ -119,7 +121,7 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
         val audioFormat = AudioFormat.ENCODING_PCM_16BIT
 
         val minBufferSize = AudioRecord.getMinBufferSize(
-            listen.getAudioParams().sampleRate,channel,
+            listen.getAudioParams().sampleRate, channel,
             audioFormat
         )
         // Note that buffer size is set to 2 * minBufferSize, because in asynchronous inference,
@@ -127,9 +129,17 @@ class AsyncAudioRecordActivity : AppCompatActivity() {
         // store the audio samples and analyze them when the audio samples reach enough size.
         val buffer = ShortArray(2 * minBufferSize)
         val sampleRate = listen.getAudioParams().sampleRate
-        audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, channel, audioFormat, buffer.size)
+        // We recommend using MediaRecorder.AudioSource.MIC as a audio source, especially when you
+        // want to detect non-voice sound events.
+        audioRecord = AudioRecord(
+            MediaRecorder.AudioSource.MIC,
+            sampleRate,
+            channel,
+            audioFormat,
+            buffer.size
+        )
         if (audioRecord?.state == AudioRecord.STATE_UNINITIALIZED) {
-            Log.w(TAG, "Failed to initialize AudioRecord", )
+            Log.w(TAG, "Failed to initialize AudioRecord")
             return
         }
         audioRecord?.startRecording()

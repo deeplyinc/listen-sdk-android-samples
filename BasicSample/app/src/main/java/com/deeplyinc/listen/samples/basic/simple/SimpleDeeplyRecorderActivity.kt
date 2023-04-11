@@ -26,9 +26,7 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
     }
 
     private val listen = Listen(this)
-
-    private var recorder: DeeplyRecorder? = null
-
+    private val recorder = DeeplyRecorder()
     private lateinit var binding: ActivityBasicBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,10 +35,10 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
         binding = DataBindingUtil.setContentView(this, R.layout.activity_basic)
         binding.lifecycleOwner = this
 
+        requestRecordingPermission()
+
         initialize()
         configureLayout()
-
-        requestRecordingPermission()
     }
 
     override fun onStop() {
@@ -59,9 +57,9 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
             try {
                 listen.load("SDK KEY", "DPL ASSET PATH")
 
-                recorder = DeeplyRecorder(
+                initRecorder(
                     sampleRate = listen.getAudioParams().sampleRate,
-                    bufferSize = listen.getAudioParams().minInputSize
+                    bufferSize = listen.getAudioParams().minInputSize,
                 )
 
                 withContext(Dispatchers.Main) {
@@ -73,9 +71,25 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
         }
     }
 
+    private fun initRecorder(sampleRate: Int, bufferSize: Int) {
+        if (ActivityCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestRecordingPermission()
+
+            return
+        }
+        recorder.init(
+            sampleRate = sampleRate,
+            bufferSize = bufferSize,
+        )
+    }
+
     private fun configureLayout() {
         binding.start.setOnClickListener {
-            if (recorder?.isRecording() == true) {
+            if (recorder.isRecording()) {
                 stopRecording()
                 binding.start.text = "Start"
             } else {
@@ -104,7 +118,7 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
             return
         } else {
             lifecycleScope.launch {
-                recorder?.start()?.collect {
+                recorder.start().collect {
                     val audioSamples = it.map { it.toDouble() }.toDoubleArray()
                     val results = listen.inference(audioSamples)
                     Log.d(TAG, "Results: $results")
@@ -116,8 +130,8 @@ class SimpleDeeplyRecorderActivity : AppCompatActivity() {
     }
 
     private fun stopRecording() {
-        if (recorder?.isRecording() == true) {
-            recorder?.stop()
+        if (recorder.isRecording()) {
+            recorder.stop()
         }
     }
 
